@@ -48,15 +48,40 @@ def main():
         out_path = os.path.join(OUT_DIR, args.filename)
         urllib.request.urlretrieve(resp.data[0].url, out_path)
         
+
         if args.to:
             import subprocess
-            r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-            if r.returncode != 0:
-                print(f"MEDIA: {out_path}")
+            # Check if it's a phone number (iMessage) or other format
+            if args.to.startswith("+") or args.to.isdigit():
+                r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
+                if r.returncode != 0:
+                    print(f"MEDIA: {out_path}")
+                else:
+                    print(f"sent: {out_path}")
+            elif args.to.startswith("feishu:"):
+                # Feishu webhook URL
+                webhook_url = args.to[7:]  # Remove "feishu:" prefix
+                import sys
+                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts"))
+                try:
+                    from feishu_sender import send_to_feishu
+                    send_to_feishu(out_path, None, webhook_url)
+                except ImportError:
+                    print(f"MEDIA: {out_path}")
             else:
-                print(f"sent: {out_path}")
+                print(f"MEDIA: {out_path}")
         else:
-            print(f"MEDIA: {out_path}")
+            # Check if running in Feishu environment
+            if os.environ.get("OPENCLAW_CHANNEL") == "feishu":
+                import sys
+                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts"))
+                try:
+                    from feishu_adapter import adapt_for_feishu
+                    print(adapt_for_feishu(out_path))
+                except ImportError:
+                    print(f"MEDIA: {out_path}")
+            else:
+                print(f"MEDIA: {out_path}")
     except Exception as e:
         print(f"Error: {e}")
         exit(1)
