@@ -62,7 +62,7 @@ def main():
                 # Feishu webhook URL
                 webhook_url = args.to[7:]  # Remove "feishu:" prefix
                 import sys
-                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts"))
+                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
                 try:
                     from feishu_sender import send_to_feishu
                     send_to_feishu(out_path, None, webhook_url)
@@ -74,7 +74,7 @@ def main():
             # Check if running in Feishu environment
             if os.environ.get("OPENCLAW_CHANNEL") == "feishu":
                 import sys
-                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts"))
+                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
                 try:
                     from feishu_adapter import adapt_for_feishu
                     print(adapt_for_feishu(out_path))
