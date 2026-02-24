@@ -45,13 +45,23 @@ python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_sender.py \
 
 ### 3. 发送语音消息
 
-#### 生成并发送语音
+#### 发送原生语音（推荐）
 ```bash
-# 使用 feishu_voice.py 生成并发送语音
+# 生成并发送原生语音消息（飞书可直接播放）
 python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
   --text "老板，这是林妍的语音消息" \
   --persona linyan \
   --chat-id "$FEISHU_CHAT_ID"
+```
+
+#### 发送为媒体文件
+```bash
+# 以文件形式发送（需要点击下载）
+python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
+  --text "老板，这是语音文件" \
+  --persona linyan \
+  --chat-id "$FEISHU_CHAT_ID" \
+  --media
 ```
 
 #### 只生成语音
@@ -59,7 +69,7 @@ python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
 python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
   --text "早安，先生" \
   --persona suwan \
-  --output /root/.openclaw/media/suwan_voice.mp3
+  --output /root/.openclaw/media/suwan_voice.opus
 ```
 
 #### 支持的音色
@@ -164,7 +174,7 @@ export FEISHU_CHAT_ID="oc_xxxxxxxx"
 ## 待完善功能
 
 - [x] 支持飞书图片直接发送
-- [x] 支持语音消息发送
+- [x] 支持原生语音消息发送（可直接播放）
 - [ ] 支持飞书 Bot Token 方式（支持更多 API）
 - [ ] 支持图片上传获取 image_key
 - [ ] 支持富文本卡片消息
