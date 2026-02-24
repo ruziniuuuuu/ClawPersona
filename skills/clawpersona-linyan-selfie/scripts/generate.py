@@ -49,48 +49,38 @@ def main():
         urllib.request.urlretrieve(resp.data[0].url, out_path)
         
 
-        if args.to:
-            import subprocess
-            # Check if it's a phone number (iMessage) or other format
-            if args.to.startswith("+") or args.to.isdigit():
-                r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-                if r.returncode != 0:
-                    print(f"MEDIA: {out_path}")
-                else:
-                    print(f"sent: {out_path}")
-            elif args.to.startswith("feishu:"):
-                # Feishu webhook URL
-                webhook_url = args.to[7:]  # Remove "feishu:" prefix
-                import sys
-                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
-                try:
-                    from feishu_sender import send_to_feishu
-                    send_to_feishu(out_path, None, webhook_url)
-                except ImportError:
-                    print(f"MEDIA: {out_path}")
-            else:
-                print(f"MEDIA: {out_path}")
-        else:
-            # Check if running in Feishu environment
-            if os.environ.get("OPENCLAW_CHANNEL") == "feishu":
-                import sys
-                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
-                try:
-                    from feishu_direct import send_image_to_feishu
-                    success = send_image_to_feishu(out_path)
-                    if not success:
-                        # Fallback to adapter
-                        from feishu_adapter import adapt_for_feishu
-                        print(adapt_for_feishu(out_path))
-                except ImportError:
-                    # Fallback to adapter
-                    try:
-                        from feishu_adapter import adapt_for_feishu
-                        print(adapt_for_feishu(out_path))
-                    except ImportError:
+        # Send or output media
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
+        try:
+            from feishu_media import handle_media_output, is_feishu_env, send_media_to_feishu
+            
+            if args.to:
+                # Explicit recipient specified
+                import subprocess
+                if args.to.startswith("+") or args.to.isdigit():
+                    # iMessage
+                    r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
+                    if r.returncode != 0:
                         print(f"MEDIA: {out_path}")
+                    else:
+                        print(f"sent: {out_path}")
+                else:
+                    # Try to send directly
+                    print(handle_media_output(out_path, args.to))
+            elif is_feishu_env():
+                # In Feishu environment - send directly
+                success = send_media_to_feishu(out_path)
+                if success:
+                    print(f"[已发送到飞书]")
+                else:
+                    print(f"MEDIA: {out_path}")
             else:
+                # Default output
                 print(f"MEDIA: {out_path}")
+        except ImportError as e:
+            print(f"Warning: Feishu media sender not available: {e}", file=sys.stderr)
+            print(f"MEDIA: {out_path}")
     except Exception as e:
         print(f"Error: {e}")
         exit(1)
