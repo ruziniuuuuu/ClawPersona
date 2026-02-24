@@ -79,6 +79,27 @@ def convert_to_opus(input_path: str, output_path: str) -> bool:
         return False
 
 
+def get_audio_duration(file_path: str) -> int:
+    """Get audio duration in milliseconds"""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            file_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            duration_sec = float(result.stdout.strip())
+            return int(duration_sec * 1000)
+    except:
+        pass
+    
+    # Estimate based on file size (rough approximation for opus)
+    file_size = os.path.getsize(file_path)
+    return int((file_size * 8 / 24000) * 1000)
+
+
 def send_voice_to_feishu(voice_path: str, chat_id: Optional[str] = None) -> bool:
     """Send voice/audio to Feishu using OpenClaw's message tool"""
     if not os.path.exists(voice_path):
@@ -143,7 +164,7 @@ def send_voice_to_feishu(voice_path: str, chat_id: Optional[str] = None) -> bool
         return False
 
 
-def generate_and_send_voice(text: str, persona: str, chat_id: Optional[str] = None, native_opus: bool = True) -> bool:
+def generate_and_send_voice(text: str, persona: str, chat_id: Optional[str] = None, native: bool = True) -> bool:
     """
     Generate voice and send to Feishu
     
@@ -151,7 +172,7 @@ def generate_and_send_voice(text: str, persona: str, chat_id: Optional[str] = No
         text: Text to convert to speech
         persona: Persona key
         chat_id: Feishu chat ID (optional)
-        native_opus: Convert to opus format for native voice experience (default: True)
+        native: Use native voice message format (default: True)
     """
     out_dir = os.path.expanduser("~/.openclaw/media")
     os.makedirs(out_dir, exist_ok=True)
@@ -162,22 +183,40 @@ def generate_and_send_voice(text: str, persona: str, chat_id: Optional[str] = No
     if not generate_voice(text, persona, mp3_path):
         return False
     
-    # Convert to opus if requested
-    if native_opus:
-        opus_path = os.path.join(out_dir, f"{persona}_voice.opus")
-        if convert_to_opus(mp3_path, opus_path):
-            voice_path = opus_path
-            # Clean up MP3
-            os.remove(mp3_path)
-        else:
-            voice_path = mp3_path
+    # Convert to opus
+    opus_path = os.path.join(out_dir, f"{persona}_voice.opus")
+    if not convert_to_opus(mp3_path, opus_path):
+        os.remove(mp3_path)
+        return False
+    
+    # Clean up MP3
+    os.remove(mp3_path)
+    
+    if native:
+        # Use native voice sender
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        native_script = os.path.join(script_dir, "feishu_native_voice.py")
+        
+        # Get duration
+        duration = get_audio_duration(opus_path)
+        
+        # Set chat ID in environment
+        chat = chat_id or os.environ.get("FEISHU_CHAT_ID")
+        if chat:
+            os.environ["FEISHU_CHAT_ID"] = chat
+        
+        # Call the native sender
+        cmd = [
+            "python3", native_script,
+            opus_path,
+            "--duration", str(duration)
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        return result.returncode == 0
     else:
-        voice_path = mp3_path
-    
-    # Send to Feishu
-    success = send_voice_to_feishu(voice_path, chat_id)
-    
-    return success
+        # Use media send
+        return send_voice_to_feishu(opus_path, chat_id)
 
 
 if __name__ == "__main__":
@@ -187,7 +226,8 @@ if __name__ == "__main__":
     parser.add_argument("--persona", default="linyan", help="Persona key")
     parser.add_argument("--chat-id", help="Feishu chat ID")
     parser.add_argument("--output", help="Output file path (optional)")
-    parser.add_argument("--mp3", action="store_true", help="Use MP3 format instead of opus")
+    parser.add_argument("--native", action="store_true", default=True, help="Use native voice message format (default)")
+    parser.add_argument("--media", action="store_true", help="Use media file format instead of native voice")
     args = parser.parse_args()
     
     if args.output:
@@ -200,6 +240,6 @@ if __name__ == "__main__":
             args.text, 
             args.persona, 
             args.chat_id,
-            native_opus=not args.mp3
+            native=not args.media
         )
         print("Sent successfully" if success else "Failed")
