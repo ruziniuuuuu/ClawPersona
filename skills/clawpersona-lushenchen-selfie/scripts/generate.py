@@ -76,10 +76,19 @@ def main():
                 import sys
                 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
                 try:
-                    from feishu_adapter import adapt_for_feishu
-                    print(adapt_for_feishu(out_path))
+                    from feishu_direct import send_image_to_feishu
+                    success = send_image_to_feishu(out_path)
+                    if not success:
+                        # Fallback to adapter
+                        from feishu_adapter import adapt_for_feishu
+                        print(adapt_for_feishu(out_path))
                 except ImportError:
-                    print(f"MEDIA: {out_path}")
+                    # Fallback to adapter
+                    try:
+                        from feishu_adapter import adapt_for_feishu
+                        print(adapt_for_feishu(out_path))
+                    except ImportError:
+                        print(f"MEDIA: {out_path}")
             else:
                 print(f"MEDIA: {out_path}")
     except Exception as e:
