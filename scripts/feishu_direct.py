@@ -25,11 +25,40 @@ def send_image_to_feishu(image_path: str, chat_id: Optional[str] = None, caption
         return False
     
     # Get chat ID from environment or use provided
-    target = chat_id or os.environ.get("FEISHU_CHAT_ID") or os.environ.get("OPENCLAW_CONVERSATION_ID")
+    # Try multiple environment variables that might contain the chat ID
+    target = chat_id 
+    if not target:
+        # Try to get from various environment variables
+        for env_var in ["FEISHU_CHAT_ID", "OPENCLAW_CONVERSATION_ID", "FEISHU_TARGET"]:
+            target = os.environ.get(env_var)
+            if target:
+                break
+    
+    # If still no target, try to extract from session key
+    if not target:
+        session_key = os.environ.get("OPENCLAW_SESSION_KEY", "")
+        if "feishu:group:" in session_key:
+            # Extract chat ID from session key like "agent:main:feishu:group:oc_xxx"
+            parts = session_key.split(":")
+            if len(parts) >= 4:
+                target = parts[-1]
     
     if not target:
-        # Try to extract from session info
-        # In OpenClaw, the conversation info is passed via environment
+        # Try to get from parent process environment
+        try:
+            with open(f"/proc/{os.getppid()}/environ", "rb") as f:
+                parent_env = f.read().decode("utf-8", errors="ignore")
+                for line in parent_env.split("\0"):
+                    if line.startswith("FEISHU_CHAT_ID="):
+                        target = line.split("=", 1)[1]
+                        break
+                    elif line.startswith("OPENCLAW_CONVERSATION_ID="):
+                        target = line.split("=", 1)[1]
+                        break
+        except:
+            pass
+    
+    if not target:
         print(f"Warning: No chat ID found, outputting MEDIA format", file=sys.stderr)
         print(f"MEDIA: {image_path}")
         return False
