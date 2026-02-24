@@ -6,12 +6,13 @@ ClawPersona 现已支持飞书平台！所有 10 个人设都可以生成自拍�
 
 ## 快速开始
 
-### 1. 配置飞书 Webhook
+### 1. 配置飞书环境
 
 设置环境变量：
 ```bash
 export FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx"
 export OPENCLAW_CHANNEL="feishu"  # 让 skill 自动检测飞书环境
+export FEISHU_CHAT_ID="oc_xxxxxxxx"  # 飞书聊天群ID
 ```
 
 ### 2. 生成并发送自拍
@@ -41,6 +42,32 @@ python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_sender.py \
   --text "主人主人～看人家的新自拍！" \
   --webhook "$FEISHU_WEBHOOK_URL"
 ```
+
+### 3. 发送语音消息
+
+#### 生成并发送语音
+```bash
+# 使用 feishu_voice.py 生成并发送语音
+python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
+  --text "老板，这是林妍的语音消息" \
+  --persona linyan \
+  --chat-id "$FEISHU_CHAT_ID"
+```
+
+#### 只生成语音
+```bash
+python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
+  --text "早安，先生" \
+  --persona suwan \
+  --output /root/.openclaw/media/suwan_voice.mp3
+```
+
+#### 支持的音色
+| 人设 | 音色 | Voice ID |
+|------|------|----------|
+| 苏婉、夏阳、糖果 | 温柔女声 | zh-CN-XiaoxiaoNeural |
+| 林妍、顾瑾 | 成熟女声 | zh-CN-XiaoyiNeural |
+| 陆景深、江屿、沈墨白、顾言、许知远 | 男声 | zh-CN-YunxiNeural |
 
 ### 3. 在 OpenClaw 中使用
 
@@ -78,6 +105,8 @@ AI: [自动生成并发送到飞书]
 ClawPersona/scripts/
 ├── feishu_sender.py      # 飞书消息发送器
 ├── feishu_adapter.py     # 输出格式适配器
+├── feishu_direct.py      # 直接发送图片到飞书
+├── feishu_voice.py       # 生成并发送语音
 └── generate_template.py  # 带飞书支持的模板
 ```
 
@@ -85,7 +114,8 @@ ClawPersona/scripts/
 
 | 变量名 | 说明 | 必需 |
 |--------|------|------|
-| `FEISHU_WEBHOOK_URL` | 飞书机器人的 webhook 地址 | 是（用于发送） |
+| `FEISHU_WEBHOOK_URL` | 飞书机器人的 webhook 地址 | 否（用于 webhook 发送） |
+| `FEISHU_CHAT_ID` | 飞书聊天群ID | 是（用于直接发送） |
 | `OPENCLAW_CHANNEL` | 当前渠道，设为 `feishu` 自动适配 | 否（推荐设置） |
 | `ARK_API_KEY` | 豆包 API Key | 是（用于生图） |
 
@@ -107,30 +137,38 @@ ClawPersona/scripts/
 
 ### 图片发送失败
 
-1. 检查 webhook URL 是否正确
+1. 检查 `FEISHU_CHAT_ID` 是否正确设置
 2. 检查机器人是否有发送图片权限
-3. 查看错误日志：`python3 scripts/feishu_sender.py --image test.jpg --webhook URL`
+3. 查看错误日志：`python3 scripts/feishu_direct.py --image test.jpg`
+
+### 语音发送失败
+
+1. 确保已安装 edge-tts：`pip install edge-tts`
+2. 检查网络连接（Edge TTS 需要访问微软服务）
+3. 查看支持的音色：`python3 -m edge_tts --list-voices | grep zh-CN`
 
 ### 环境变量不生效
 
 确保在启动 OpenClaw 前设置：
 ```bash
 export OPENCLAW_CHANNEL="feishu"
-export FEISHU_WEBHOOK_URL="https://..."
+export FEISHU_CHAT_ID="oc_xxxxxxxx"
 ```
 
-### 飞书 webhook 限制
+### 飞书频率限制
 
-飞书 webhook 有频率限制：
+飞书对消息发送有限制：
 - 每个机器人每分钟最多发送 20 条消息
-- 图片需要通过上传获取 image_key
+- 图片和语音都通过文件上传方式发送
 
 ## 待完善功能
 
+- [x] 支持飞书图片直接发送
+- [x] 支持语音消息发送
 - [ ] 支持飞书 Bot Token 方式（支持更多 API）
 - [ ] 支持图片上传获取 image_key
 - [ ] 支持富文本卡片消息
-- [ ] 支持语音消息发送
+- [ ] 支持人格切换时自动发送语音问候
 
 ## 贡献
 
