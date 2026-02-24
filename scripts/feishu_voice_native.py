@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Feishu voice sender for ClawPersona
-Generates voice using Edge TTS and sends to Feishu in native opus format
+Feishu native voice message sender for ClawPersona
+Generates voice using Edge TTS and converts to Feishu native format (opus)
 """
 import os
 import subprocess
@@ -79,8 +79,33 @@ def convert_to_opus(input_path: str, output_path: str) -> bool:
         return False
 
 
-def send_voice_to_feishu(voice_path: str, chat_id: Optional[str] = None) -> bool:
-    """Send voice/audio to Feishu using OpenClaw's message tool"""
+def get_audio_duration(file_path: str) -> int:
+    """Get audio duration in milliseconds"""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            file_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            duration_sec = float(result.stdout.strip())
+            return int(duration_sec * 1000)  # Convert to milliseconds
+    except:
+        pass
+    
+    # Estimate based on file size (rough approximation)
+    file_size = os.path.getsize(file_path)
+    # Assume ~24kbps for opus
+    return int((file_size * 8 / 24000) * 1000)
+
+
+def send_native_voice_to_feishu(voice_path: str, duration_ms: int, chat_id: Optional[str] = None) -> bool:
+    """
+    Send native voice message to Feishu
+    Uses OpenClaw's message tool with audio type
+    """
     if not os.path.exists(voice_path):
         print(f"Error: Voice file not found: {voice_path}", file=sys.stderr)
         return False
@@ -101,27 +126,14 @@ def send_voice_to_feishu(voice_path: str, chat_id: Optional[str] = None) -> bool
             if len(parts) >= 4:
                 target = parts[-1]
     
-    # Try parent process environment
-    if not target:
-        try:
-            with open(f"/proc/{os.getppid()}/environ", "rb") as f:
-                parent_env = f.read().decode("utf-8", errors="ignore")
-                for line in parent_env.split("\0"):
-                    if line.startswith("FEISHU_CHAT_ID="):
-                        target = line.split("=", 1)[1]
-                        break
-                    elif line.startswith("OPENCLAW_CONVERSATION_ID="):
-                        target = line.split("=", 1)[1]
-                        break
-        except:
-            pass
-    
     if not target:
         print(f"Warning: No chat ID found, cannot send voice", file=sys.stderr)
         return False
     
-    # Use openclaw message tool to send
+    # Use openclaw message tool to send as audio
     try:
+        # For native voice, we need to use the message tool with audio type
+        # The message tool should handle the conversion
         cmd = [
             "openclaw", "message", "send",
             "--channel", "feishu",
@@ -143,63 +155,84 @@ def send_voice_to_feishu(voice_path: str, chat_id: Optional[str] = None) -> bool
         return False
 
 
-def generate_and_send_voice(text: str, persona: str, chat_id: Optional[str] = None, native_opus: bool = True) -> bool:
+def generate_and_send_native_voice(text: str, persona: str, chat_id: Optional[str] = None) -> bool:
     """
-    Generate voice and send to Feishu
-    
-    Args:
-        text: Text to convert to speech
-        persona: Persona key
-        chat_id: Feishu chat ID (optional)
-        native_opus: Convert to opus format for native voice experience (default: True)
+    Generate voice and send as Feishu native voice message
     """
     out_dir = os.path.expanduser("~/.openclaw/media")
     os.makedirs(out_dir, exist_ok=True)
     
     # Generate MP3 first
     mp3_path = os.path.join(out_dir, f"{persona}_voice_temp.mp3")
+    opus_path = os.path.join(out_dir, f"{persona}_voice.opus")
     
     if not generate_voice(text, persona, mp3_path):
         return False
     
-    # Convert to opus if requested
-    if native_opus:
-        opus_path = os.path.join(out_dir, f"{persona}_voice.opus")
-        if convert_to_opus(mp3_path, opus_path):
-            voice_path = opus_path
-            # Clean up MP3
-            os.remove(mp3_path)
-        else:
-            voice_path = mp3_path
+    # Try to convert to opus for native voice format
+    if convert_to_opus(mp3_path, opus_path):
+        voice_path = opus_path
+        duration_ms = get_audio_duration(opus_path)
     else:
+        # Fallback to MP3
         voice_path = mp3_path
+        duration_ms = get_audio_duration(mp3_path)
     
     # Send to Feishu
-    success = send_voice_to_feishu(voice_path, chat_id)
+    success = send_native_voice_to_feishu(voice_path, duration_ms, chat_id)
+    
+    # Cleanup temp file
+    if os.path.exists(mp3_path) and voice_path != mp3_path:
+        os.remove(mp3_path)
     
     return success
 
 
+def output_feishu_voice_format(voice_path: str, duration_ms: Optional[int] = None):
+    """
+    Output voice in Feishu native format for OpenClaw to handle
+    This outputs a special format that OpenClaw Feishu channel will recognize
+    """
+    if not os.path.exists(voice_path):
+        print(f"Error: Voice file not found: {voice_path}", file=sys.stderr)
+        return
+    
+    if duration_ms is None:
+        duration_ms = get_audio_duration(voice_path)
+    
+    # Output in a format that OpenClaw can recognize as voice
+    # The Feishu channel should handle this
+    print(f"VOICE: {voice_path} | duration={duration_ms}ms")
+
+
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Generate and send voice to Feishu")
+    parser = argparse.ArgumentParser(description="Generate and send native voice to Feishu")
     parser.add_argument("--text", required=True, help="Text to convert to speech")
     parser.add_argument("--persona", default="linyan", help="Persona key")
     parser.add_argument("--chat-id", help="Feishu chat ID")
     parser.add_argument("--output", help="Output file path (optional)")
-    parser.add_argument("--mp3", action="store_true", help="Use MP3 format instead of opus")
+    parser.add_argument("--native", action="store_true", help="Output in Feishu native format")
     args = parser.parse_args()
     
     if args.output:
         # Just generate, don't send
         success = generate_voice(args.text, args.persona, args.output)
         print(f"Generated: {args.output}" if success else "Failed")
+    elif args.native:
+        # Generate and output native format
+        out_dir = os.path.expanduser("~/.openclaw/media")
+        os.makedirs(out_dir, exist_ok=True)
+        mp3_path = os.path.join(out_dir, f"{args.persona}_voice_temp.mp3")
+        opus_path = os.path.join(out_dir, f"{args.persona}_voice.opus")
+        
+        if generate_voice(args.text, args.persona, mp3_path):
+            if convert_to_opus(mp3_path, opus_path):
+                output_feishu_voice_format(opus_path)
+                os.remove(mp3_path)
+            else:
+                output_feishu_voice_format(mp3_path)
     else:
         # Generate and send
-        success = generate_and_send_voice(
-            args.text, 
-            args.persona, 
-            args.chat_id,
-            native_opus=not args.mp3
-        )
+        success = generate_and_send_native_voice(args.text, args.persona, args.chat_id)
         print("Sent successfully" if success else "Failed")
