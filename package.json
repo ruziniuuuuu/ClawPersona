@@ -1,0 +1,46 @@
+{
+  "name": "clawpersona",
+  "version": "1.0.0",
+  "description": "Multi-persona AI assistant system for OpenClaw - 多人设 AI 助手系统",
+  "main": "src/installer.js",
+  "bin": {
+    "clawpersona": "bin/cli.js"
+  },
+  "scripts": {
+    "postinstall": "node bin/cli.js",
+    "test": "node bin/cli.js list"
+  },
+  "keywords": [
+    "openclaw",
+    "ai-agent",
+    "persona",
+    "multi-persona",
+    "character",
+    "ai-girlfriend",
+    "selfie",
+    "doubao",
+    "seedream",
+    "clawpersona"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TATP-233/ClawPersona.git"
+  },
+  "homepage": "https://github.com/TATP-233/ClawPersona#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "skills/",
+    "personas/",
+    "templates/",
+    "commands/",
+    "README.md"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
+}

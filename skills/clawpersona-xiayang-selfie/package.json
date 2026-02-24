@@ -1,0 +1,24 @@
+{
+  "name": "clawpersona-xiayang-selfie",
+  "version": "1.0.0",
+  "description": "Generate Xia Yang (sporty) selfies via Doubao Seedream API",
+  "main": "scripts/generate.py",
+  "scripts": {
+    "generate": "python3 scripts/generate.py"
+  },
+  "keywords": [
+    "openclaw",
+    "selfie",
+    "ai",
+    "image-generation",
+    "doubao",
+    "sporty",
+    "fitness"
+  ],
+  "author": "ClawPersona",
+  "license": "MIT",
+  "peerDependencies": {
+    "openclaw": ">=0.1.0"
+  },
+  "primaryEnv": "ARK_API_KEY"
+}

@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+
+/**
+ * /persona-list command - List all available personas
+ * 
+ * Usage: /persona-list
+ */
+
+const { listPersonas } = require("../src/persona-switcher");
+
+function main() {
+  const list = listPersonas();
+  
+  console.log("可用人格:");
+  console.log("");
+  
+  list.personas.forEach((p) => {
+    const marker = p.isActive ? " (当前)" : "";
+    console.log(`${p.number}. ${p.name} ${p.emoji} - ${p.description}${marker}`);
+  });
+  
+  if (list.current) {
+    console.log("");
+    console.log(`当前激活: ${list.current.name} ${list.current.emoji}`);
+  }
+  
+  console.log("");
+  console.log("切换人格: /persona <name>");
+}
+
+main();

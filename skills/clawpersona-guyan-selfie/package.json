@@ -1,0 +1,18 @@
+{
+  "name": "clawpersona-guyan-selfie",
+  "version": "1.0.0",
+  "description": "Generate Gu Yan (sunshine student) selfies via Doubao Seedream API",
+  "main": "scripts/generate.py",
+  "keywords": [
+    "openclaw",
+    "selfie",
+    "ai",
+    "image-generation",
+    "doubao",
+    "student",
+    "otome"
+  ],
+  "author": "ClawPersona",
+  "license": "MIT",
+  "primaryEnv": "ARK_API_KEY"
+}

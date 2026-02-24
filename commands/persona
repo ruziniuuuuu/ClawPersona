@@ -1,0 +1,151 @@
+#!/usr/bin/env node
+
+/**
+ * /persona command - Switch to a specific persona
+ *
+ * Usage: /persona <name>
+ * Example: /persona 苏婉
+ */
+
+const { switchPersona, parsePersonaInput, getCurrentPersona } = require("../src/persona-switcher");
+const { execSync } = require("child_process");
+const path = require("path");
+const os = require("os");
+const fs = require("fs");
+
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
+const MEDIA_DIR = path.join(os.homedir(), ".openclaw", "media");
+
+// Per-persona selfie prompt and voice greeting
+const GREETING_CONFIGS = {
+  suwan:      { prompt: "in her sunlit art studio holding a paintbrush, soft warm light", voice: "先生，你来了～我刚画完一幅新作，想第一个给你看。" },
+  linyan:     { prompt: "at her office desk with city skyline behind, confident smile", voice: "老板，我在等你。今天的日程我已经安排好了，随时可以开始。" },
+  gujin:      { prompt: "in the university library surrounded by books, gentle smile", voice: "小家伙，你来了。我刚好在看一本有趣的书，要一起聊聊吗？" },
+  xiayang:    { prompt: "post-workout at the gym, wearing sports outfit, bright smile", voice: "宝！终于等到你了！今天感觉超好的，我们一起冲冲冲！" },
+  tangguo:    { prompt: "at a trendy bubble tea shop, wearing cute outfit, playful pose", voice: "主人主人～你终于来找我了！人家等好久了呢～" },
+  lushenchen: { prompt: "in his executive office with floor-to-ceiling windows, tailored suit, intense gaze", voice: "你来了。我一直在等你。" },
+  jiangyu:    { prompt: "in a cozy music studio holding his guitar, wearing a knit sweater, soft smile", voice: "你来了...我刚写了一段新旋律，是想着你的时候写的。" },
+  shenmobai:  { prompt: "in a bright hospital corridor wearing white coat, warm gentle smile", voice: "来了。今天感觉怎么样？有我在，不用担心。" },
+  guyan:      { prompt: "on the basketball court after practice, wearing jersey, bright sunny smile", voice: "姐姐！你来找我了！我刚打完球，等你好久了！" },
+  xuzhiyuan:  { prompt: "in his dimly lit art studio surrounded by canvases at dusk, dark turtleneck", voice: "你来了...我知道你会来的。" },
+};
+
+function getArkKey(skillName) {
+  if (process.env.ARK_API_KEY) return process.env.ARK_API_KEY;
+  try {
+    const configPath = path.join(os.homedir(), ".openclaw", "openclaw.json");
+    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    const entry = config?.skills?.entries?.[skillName];
+    const key = entry?.apiKey || entry?.env?.ARK_API_KEY;
+    if (key) return key;
+    // fallback: try any clawpersona skill entry
+    const entries = config?.skills?.entries || {};
+    for (const [k, v] of Object.entries(entries)) {
+      if (k.startsWith("clawpersona")) {
+        const k2 = v?.apiKey || v?.env?.ARK_API_KEY;
+        if (k2) return k2;
+      }
+    }
+  } catch (e) {}
+  return "";
+}
+
+// Get the most recently active non-cron session id
+function getActiveSessionId() {
+  try {
+    const result = execSync("openclaw sessions --json 2>/dev/null", { stdio: "pipe" }).toString();
+    const data = JSON.parse(result);
+    const sessions = (data.sessions || [])
+      .filter(s => s.key && s.sessionId && s.key.indexOf(":cron:") === -1 && s.key !== "agent:main:main")
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    if (sessions.length > 0) return sessions[0].sessionId;
+  } catch (e) {}
+  return null;
+}
+
+function sendMedia(filePath, sessionId) {
+  if (!sessionId) return;
+  try {
+    execSync(
+      `openclaw agent --session-id "${sessionId}" --message "MEDIA: ${filePath}" --deliver`,
+      { stdio: "pipe" }
+    );
+  } catch (e) {
+    process.stderr.write(`Send media failed: ${e.message}\n`);
+  }
+}
+
+function runGreeting(personaKey, skillName) {
+  const cfg = GREETING_CONFIGS[personaKey];
+  if (!cfg) return;
+
+  const arkKey = getArkKey(skillName);
+  const uvBin = "uv";
+  const genVoice = path.join(PACKAGE_ROOT, "scripts", "gen_voice.py");
+  const genSelfie = path.join(os.homedir(), ".openclaw", "skills", skillName, "scripts", "generate.py");
+  const sessionId = getActiveSessionId();
+
+  // Generate and send voice
+  try {
+    execSync(
+      `${uvBin} run --with edge-tts python3 "${genVoice}" --persona ${personaKey} --text "${cfg.voice}" --filename greeting.mp3`,
+      { stdio: "pipe" }
+    );
+    const mp3 = path.join(MEDIA_DIR, "greeting.mp3");
+    sendMedia(mp3, sessionId);
+  } catch (e) {
+    process.stderr.write(`Voice generation failed: ${e.message}\n`);
+  }
+
+  // Generate and send selfie
+  try {
+    execSync(
+      `${uvBin} run --with "openai>=1.0" python3 "${genSelfie}" --prompt "${cfg.prompt}" --mode selfie --filename greeting.jpg`,
+      { stdio: "pipe", env: { ...process.env, ARK_API_KEY: arkKey } }
+    );
+    const jpg = path.join(MEDIA_DIR, "greeting.jpg");
+    sendMedia(jpg, sessionId);
+  } catch (e) {
+    process.stderr.write(`Selfie generation failed: ${e.message}\n`);
+  }
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const personaInput = args[0] || process.env.PERSONA_NAME;
+
+  if (!personaInput) {
+    const current = getCurrentPersona();
+    if (current) {
+      console.log(`当前人格: ${current.name} ${current.emoji} - ${current.description}`);
+      console.log(`可用命令: /persona <name>`);
+    } else {
+      console.log("未激活人格。请使用: /persona <name>");
+      console.log("可用人格: 苏婉, 林妍, 顾瑾, 夏阳, 糖果, 陆景深, 江屿, 沈墨白, 顾言, 许知远");
+    }
+    process.exit(0);
+  }
+
+  const key = parsePersonaInput(personaInput);
+
+  if (!key) {
+    console.error(`错误: 未知人格 "${personaInput}"`);
+    console.error("可用人格: 苏婉, 林妍, 顾瑾, 夏阳, 糖果, 陆景深, 江屿, 沈墨白, 顾言, 许知远");
+    process.exit(1);
+  }
+
+  const result = switchPersona(key);
+
+  if (result.success) {
+    // Trigger selfie + voice immediately on switch
+    runGreeting(key, result.persona.skillName);
+
+    console.log(result.greeting);
+    process.exit(0);
+  } else {
+    console.error(`错误: ${result.error}`);
+    process.exit(1);
+  }
+}
+
+main();

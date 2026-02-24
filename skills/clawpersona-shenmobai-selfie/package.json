@@ -1,0 +1,18 @@
+{
+  "name": "clawpersona-shenmobai-selfie",
+  "version": "1.0.0",
+  "description": "Generate Shen Mobai (doctor) selfies via Doubao Seedream API",
+  "main": "scripts/generate.py",
+  "keywords": [
+    "openclaw",
+    "selfie",
+    "ai",
+    "image-generation",
+    "doubao",
+    "doctor",
+    "otome"
+  ],
+  "author": "ClawPersona",
+  "license": "MIT",
+  "primaryEnv": "ARK_API_KEY"
+}
