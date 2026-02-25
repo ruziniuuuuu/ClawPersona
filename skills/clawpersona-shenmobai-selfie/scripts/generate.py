@@ -41,15 +41,10 @@ def main():
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
         try:
-            from feishu_media import is_feishu_env, send_media_to_feishu
+            from feishu import is_feishu_env, send_media
             
-            if args.to and (args.to.startswith("+") or args.to.isdigit()):
-                import subprocess
-                r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-                print(f"sent: {out_path}" if r.returncode == 0 else f"MEDIA: {out_path}")
-            elif is_feishu_env():
-                success = send_media_to_feishu(out_path)
-                print(f"[已发送到飞书]" if success else f"MEDIA: {out_path}")
+            if is_feishu_env() and send_media(out_path):
+                print("[已发送到飞书]")
             else:
                 print(f"MEDIA: {out_path}")
         except Exception:
