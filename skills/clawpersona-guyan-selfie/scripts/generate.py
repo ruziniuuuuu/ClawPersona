@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Gu Yan (sunshine student) selfie via Doubao Seedream API."""
+"""Generate Guyan (sunshine student) selfie via Doubao Seedream API."""
 import os, base64, argparse, urllib.request
 from openai import OpenAI
 
@@ -36,58 +36,24 @@ def main():
         )
         out_path = os.path.join(OUT_DIR, args.filename)
         urllib.request.urlretrieve(resp.data[0].url, out_path)
-                # Send or output media
+        
+        # Send or output media
         import sys
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
         try:
-            from feishu_media import handle_media_output, is_feishu_env, send_media_to_feishu
+            from feishu_media import is_feishu_env, send_media_to_feishu
             
-            if args.to:
-                # Explicit recipient specified
+            if args.to and (args.to.startswith("+") or args.to.isdigit()):
                 import subprocess
-                if args.to.startswith("+") or args.to.isdigit():
-                    # iMessage
-                    r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-                    if r.returncode != 0:
-                        print(f"MEDIA: {out_path}")
-                    else:
-                        print(f"sent: {out_path}")
-                else:
-                    # Try to send directly
-                    print(handle_media_output(out_path, args.to))
+                r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
+                print(f"sent: {out_path}" if r.returncode == 0 else f"MEDIA: {out_path}")
             elif is_feishu_env():
-                # In Feishu environment - send directly
                 success = send_media_to_feishu(out_path)
-                if success:
-                    print(f"[已发送到飞书]")
-                else:
-                    print(f"MEDIA: {out_path}")
+                print(f"[已发送到飞书]" if success else f"MEDIA: {out_path}")
             else:
-                # Default output
                 print(f"MEDIA: {out_path}")
-        except ImportError as e:
-            print(f"Warning: Feishu media sender not available: {e}", file=sys.stderr)
+        except Exception:
             print(f"MEDIA: {out_path}")
-            else:
-                print(f"MEDIA: {out_path}")
-        else:
-            if os.environ.get("OPENCLAW_CHANNEL") == "feishu":
-                import sys
-                sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
-                try:
-                    from feishu_direct import send_image_to_feishu
-                    success = send_image_to_feishu(out_path)
-                    if not success:
-                        from feishu_adapter import adapt_for_feishu
-                        print(adapt_for_feishu(out_path))
-                except ImportError:
-                    try:
-                        from feishu_adapter import adapt_for_feishu
-                        print(adapt_for_feishu(out_path))
-                    except ImportError:
-                        print(f"MEDIA: {out_path}")
-            else:
-                print(f"MEDIA: {out_path}")
     except Exception as e:
         print(f"Error: {e}"); exit(1)
 
