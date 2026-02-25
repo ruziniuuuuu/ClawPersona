@@ -3,18 +3,9 @@
 > 多人设 AI 助手系统 - 让你的 AI 拥有多重人格
 
 <p align="center">
-  <img src="personas/female/artistic/base.jpg" width="150" />
-  <img src="personas/female/professional/base.jpg" width="150" />
-  <img src="personas/female/scholar/base.jpg" width="150" />
-  <img src="personas/female/sporty/base.jpg" width="150" />
-  <img src="personas/female/sweetcool/base.jpg" width="150" />
-</p>
-<p align="center">
-  <img src="personas/male/domineering-ceo/base.jpg" width="150" />
-  <img src="personas/male/musician/base.jpg" width="150" />
-  <img src="personas/male/doctor/base.jpg" width="150" />
-  <img src="personas/male/sunshine-student/base.jpg" width="150" />
-  <img src="personas/male/mysterious-artist/base.jpg" width="150" />
+  <img src="assets/chat1.PNG" width="200" /> <img src="assets/chat2.PNG" width="200" /><br>
+  <img src="personas/female/artistic/base.jpg" width="150" /> <img src="personas/female/professional/base.jpg" width="150" /> <img src="personas/female/scholar/base.jpg" width="150" /> <img src="personas/female/sporty/base.jpg" width="150" /> <img src="personas/female/sweetcool/base.jpg" width="150" /><br>
+  <img src="personas/male/domineering-ceo/base.jpg" width="150" /> <img src="personas/male/musician/base.jpg" width="150" /> <img src="personas/male/doctor/base.jpg" width="150" /> <img src="personas/male/sunshine-student/base.jpg" width="150" /> <img src="personas/male/mysterious-artist/base.jpg" width="150" />
 </p>
 
 ## ✨ 项目介绍
