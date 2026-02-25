@@ -7,9 +7,9 @@ REF_IMAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../assets/
 OUT_DIR = os.path.expanduser("~/.openclaw/media")
 
 MODES = {
-    "mirror": "photo of this mysterious painter taking a mirror selfie, {prompt}, dark turtleneck, brooding artistic vibe, paint-stained hands, moody lighting, realistic photography",
-    "selfie": "close-up selfie of this mysterious painter, {prompt}, deep soulful eyes, enigmatic expression, artistic intensity, dramatic lighting, realistic photography",
-    "photo": "photo of this mysterious painter, {prompt}, art studio or gallery setting, surrounded by canvases, moody atmospheric lighting, brooding and romantic, realistic photography",
+    "mirror": "photo of this mysterious painter taking a mirror selfie, {prompt}, art studio with paintings background, paint stains on clothes, artistic lighting, contemplative mood",
+    "selfie": "close-up selfie of this mysterious painter, {prompt}, intense gaze, paint on hands, studio background, dramatic artistic lighting, deep and soulful",
+    "photo": "photo of this mysterious painter, {prompt}, thoughtful pose, gallery or riverside at sunset, golden hour lighting, mysterious and romantic expression",
 }
 
 def main():
@@ -17,7 +17,6 @@ def main():
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--mode", default="photo", choices=list(MODES.keys()))
     parser.add_argument("--filename", default="xuzhiyuan.jpg")
-    parser.add_argument("--to", default=None)
     args = parser.parse_args()
 
     if not os.path.exists(REF_IMAGE):
@@ -28,19 +27,26 @@ def main():
         b64 = base64.b64encode(f.read()).decode()
 
     client = OpenAI(
-        timeout=300,base_url="https://ark.cn-beijing.volces.com/api/v3", api_key=os.environ.get("ARK_API_KEY"))
+        timeout=300, base_url="https://ark.cn-beijing.volces.com/api/v3",
+        api_key=os.environ.get("ARK_API_KEY"))
+    
     try:
         resp = client.images.generate(
             model="doubao-seedream-4-5-251128", prompt=prompt, size="1920x1920",
-            response_format="url", extra_body={"image": f"data:image/jpeg;base64,{b64}", "watermark": False}
-        )
+            response_format="url", extra_body={"image": f"data:image/jpeg;base64,{b64}", "watermark": False})
+        
         out_path = os.path.join(OUT_DIR, args.filename)
         urllib.request.urlretrieve(resp.data[0].url, out_path)
-        if args.to:
-            import subprocess
-            r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-            print(f"MEDIA: {out_path}" if r.returncode != 0 else f"sent: {out_path}")
-        else:
+        
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
+        try:
+            from feishu import is_feishu_env, send_media
+            if is_feishu_env() and send_media(out_path):
+                print("[已发送到飞书]")
+            else:
+                print(f"MEDIA: {out_path}")
+        except:
             print(f"MEDIA: {out_path}")
     except Exception as e:
         print(f"Error: {e}"); exit(1)

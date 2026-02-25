@@ -22,10 +22,10 @@
 ClawPersona 是一个多人设 AI 助手系统，基于 OpenClaw 框架构建。系统包含 10 个独特的人设（5 女 5 男），每个都有独立的性格、声音和视觉形象，能够:
 
 - 🎨 **生成个性化自拍** - 使用豆包 Seedream API 生成一致性的虚拟形象
-- 🎙️ **多音色语音** - 每个人设有独特的语音风格 (Edge TTS)
+- 🎙️ **多音色语音** - 每个人设有独特的语音风格 (Edge TTS)，**支持飞书语音消息**
 - 💬 **智能对话** - 根据人设性格进行个性化回复
 - 🔄 **人格切换** - 通过简单命令在对话中切换人格
-- 📱 **多平台发送** - 支持 iMessage、Discord、Telegram 等
+- 📱 **多平台发送** - 支持 iMessage、Discord、Telegram、**飞书**等
 
 ## 🚀 快速开始
 
@@ -433,6 +433,41 @@ ARK_API_KEY="your_key" \
   --prompt "good morning" --mode selfie --to "+8612345678900"
 ```
 
+### 发送到飞书
+
+```bash
+# 设置飞书 webhook
+export FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx"
+
+# 生成并发送
+ARK_API_KEY="your_key" \
+  python3 ~/.openclaw/skills/clawpersona-suwan-selfie/scripts/generate.py \
+  --prompt "good morning" --mode selfie --to "feishu:$FEISHU_WEBHOOK_URL"
+```
+
+### 发送语音到飞书
+
+```bash
+# 生成并发送语音
+python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
+  --text "老板，这是林妍的语音消息" \
+  --persona linyan \
+  --chat-id "oc_xxxxxxxx"
+
+# 只生成语音
+python3 /root/.openclaw/workspace/ClawPersona/scripts/feishu_voice.py \
+  --text "早安，先生" \
+  --persona suwan \
+  --output /root/.openclaw/media/suwan_voice.mp3
+```
+
+支持的音色：
+- `zh-CN-XiaoxiaoNeural` - 女声（苏婉、夏阳、糖果）
+- `zh-CN-XiaoyiNeural` - 女声（林妍、顾瑾）
+- `zh-CN-YunxiNeural` - 男声（陆景深、江屿、沈墨白、顾言、许知远）
+
+详见 [飞书支持文档](docs/FEISHU.md)。
+
 ### 在 OpenClaw 中使用
 
 ```
@@ -449,6 +484,7 @@ AI: [使用林妍的 selfie skill 生成职场风格图片]
 ## 📚 文档
 
 - [部署指南](DEPLOY.md) - 完整的安装和配置步骤
+- [飞书支持](docs/FEISHU.md) - 飞书平台集成指南
 - [Skill 文档](skills/clawpersona-suwan-selfie/SKILL.md) - 单个人设 skill 详细说明
 - [人设档案](personas/female/artistic/persona.md) - 苏婉完整人设档案
 

@@ -36,11 +36,18 @@ def main():
         )
         out_path = os.path.join(OUT_DIR, args.filename)
         urllib.request.urlretrieve(resp.data[0].url, out_path)
-        if args.to:
-            import subprocess
-            r = subprocess.run(["imsg", "send", "--to", args.to, "--file", out_path, "--service", "imessage"], capture_output=True)
-            print(f"MEDIA: {out_path}" if r.returncode != 0 else f"sent: {out_path}")
-        else:
+        
+        # Send or output media
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../workspace/ClawPersona/scripts"))
+        try:
+            from feishu import is_feishu_env, send_media
+            
+            if is_feishu_env() and send_media(out_path):
+                print("[已发送到飞书]")
+            else:
+                print(f"MEDIA: {out_path}")
+        except Exception:
             print(f"MEDIA: {out_path}")
     except Exception as e:
         print(f"Error: {e}"); exit(1)
